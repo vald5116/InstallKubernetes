@@ -1,2 +1,128 @@
-# InstallKubernetes
-Маленькое руководство по установке
+#Установка кибернетиса [Инструкция которой руководствовался я](https://ex-minds.ru/?p=296)
+
+## Устанавливаем [docker](https://docs.docker.com/engine/install/ubuntu/)
+
+Теперь нужно проверить какой драйвер хранилища (Storage Driver) использует docker:
+```bash
+docker info | grep 'Storage Driver'
+```
+Если это что-то отличное от overlay2 — значит на хостовой машине не подключен модуль ядра overlay. Чтобы это исправить делаем Гуглим:
+
+
+## Разворачиваем кластер Kubernates
+
+Устанавливаем (если не устанавливали ранее) стандартный набор для добавления внешних репозиториев + open-iscsi
+```bash
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl open-iscsi
+```
+
+Скачиванм gpg ключ
+```bash
+sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+```
+Добавляем сам репозиторий в apt
+```bash
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+```
+И устанавливаем пакеты, которые будем использовать
+```bash
+sudo apt-get update
+sudo apt-get install kubeadm kubelet kubectl kubernetes-cni 
+sudo apt-mark hold kubeadm kubectl kubelet kubernetes-cni
+```
+
+`На этой стадии можно создать резервную копию нашего контейнера или выполнить операцию ‘Convert to template’. Я выбрал второй вариант, чтобы при разворачивании последующих контейнеров не устанавливать docker и kubernetes. Единственное что нужно помнить при таком подходе — это что после создания клона из шаблона необходимо менять IP-адрес, ну и возможно параметры выделяемых ресурсов, таких как диск, память, процессор.
+`
+
+# Мастер нода
+```bash
+sudo swapoff -a
+```
+Прокомментируйте disabled_plugins = ["cri"], если они существуют в config.toml.
+```bash
+sudo nano /etc/containerd/config.toml
+systemctl restart containerd
+```
+Инициализируем кластер 
+```bash
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+```
+выполняем:
+```bash
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+Добавляем сеть [flannel](https://github.com/flannel-io/flannel#flannel):
+```bash
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+```
+`Мастер нода готова!`
+
+# Подключение worker-нод
+
+Если делали клон то:
+
+меняем сеть:
+```bash
+sudo nano /etc/netplan/00-installer-config.yaml
+sudo netplan apply
+```
+
+
+меняем название машины (Повторятся не должны!):
+```bash
+sudo hostnamectl set-hostname kubernetesworker01
+```
+
+`Воркер-ноды системно ничем не отличаются от мастер-ноды, и по этой причине я просто клонировал два контейнера из созданного мной ранее шаблона контейнера, поменял IP-адреса, добавил им дискового пространства — до 50Гб и урезал колличество потоков CPU до двух. 
+Думаю, пока хватит.`
+После успешного запуска master-ноды в конце вывода должна быть строка для подключения worker-нод
+
+```
+kubeadm join <IP_мастер-ноды>:6443 --token g7mku9.52m1do9u3t58mfeb \
+    --discovery-token-ca-cert-hash sha256:1be8897143e616cb2ce270865a12eb9e09242eea8da461a250f481554cc9fe1b 
+```
+Ошибка на которую наткнулся я забыв переименовать ноду:
+
+[Kubernetes Master Worker Node Kubeadm Join issue](https://stackoverflow.com/questions/55767652/kubernetes-master-worker-node-kubeadm-join-issue)
+
+Решение:
+```bash
+kubeadm reset 
+```
+
+Или так, что приведет к тому же результату, но будет создан новый токен, который будет действителен в течении суток:
+```bash
+kubeadm token create --print-join-command
+```
+В итоге на местер-ноде, выполнив команду ```kubectl get nodes```, мы должны увидеть следующую картину:
+```
+NAME           STATUS   ROLES                  AGE     VERSION
+kube-master    Ready    control-plane,master   56m     v1.23.0
+kube-worker1   Ready    <none>                 9m49s   v1.23.0
+kube-worker2   Ready    <none>                 52s     v1.23.0
+```
+
+
+## Полезное
+
+[Еще инструкция мало ли может что упускаю](https://phoenixnap.com/kb/install-kubernetes-on-ubuntu)
+
+[kubectl - Шпаргалка](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
+
+[неизвестная служба runtime.v1alpha2.ImageService](https://github.com/kubernetes-sigs/cri-tools/issues/710)
+
+[Как отключить swap на Ubuntu, Debian](https://disnetern.ru/how-disable-swap-linux/)
+
+[Как добавить роли узлам в Kubernetes?](https://stackoverflow.com/questions/48854905/how-to-add-roles-to-nodes-in-kubernetes)
+
+Добавить роль
+```bash
+kubectl label node <node name> node-role.kubernetes.io/<role name>=<key - (any name)>
+```
+Удалить роль
+```bash
+kubectl label node <node name> node-role.kubernetes.io/<role name>-
+```
