@@ -2,6 +2,7 @@
 
 
 ##setting
+
 ```bash
 sudo -s
 
@@ -37,6 +38,7 @@ apt-get update
 ```
 
 ##docker
+
 ```bash
 sudo apt-get remove docker docker-engine docker.io containerd runc
 sudo apt-get update
@@ -48,6 +50,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io
 
 ```
 ##kubernetes
+
 ```bash
 apt-get install -y apt-transport-https ca-certificates curl
 
@@ -64,24 +67,31 @@ sudo apt-mark hold kubeadm kubectl kubelet kubernetes-cni
 
 
 # Мастер нода
+
 ```bash
 sudo swapoff -a
 ```
 
 Инициализируем кластер 
+
 ```bash
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16
 ```
+
 выполняем:
+
 ```bash
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
+
 Добавляем сеть [flannel](https://github.com/flannel-io/flannel#flannel):
+
 ```bash
 kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 ```
+
 `Мастер нода готова!`
 
 # Подключение worker-нод
