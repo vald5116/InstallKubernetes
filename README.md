@@ -1,7 +1,7 @@
-#Установка кибернетиса [Инструкция которой руководствовался я](https://ex-minds.ru/?p=296)
+# Установка кибернетиса [Инструкция которой руководствовался я](https://ex-minds.ru/?p=296)
 
 
-##setting
+## setting
 
 ```bash
 sudo -s
@@ -37,7 +37,7 @@ swapoff -a  <<<<<<<< just disable it in /etc/fstab instead
 apt-get update
 ```
 
-##docker
+## docker
 
 ```bash
 sudo apt-get remove docker docker-engine docker.io containerd runc
@@ -49,7 +49,7 @@ sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io
 
 ```
-##kubernetes
+## kubernetes
 
 ```bash
 apt-get install -y apt-transport-https ca-certificates curl
