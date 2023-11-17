@@ -144,7 +144,15 @@ kube-master    Ready    control-plane,master   56m     v1.23.0
 kube-worker1   Ready    <none>                 9m49s   v1.23.0
 kube-worker2   Ready    <none>                 52s     v1.23.0
 ```
+## Добавим HElM
+```
+curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+sudo apt-get install apt-transport-https --yes
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+sudo apt-get update
+sudo apt-get install helm
 
+```
 
 ## Полезное
 
